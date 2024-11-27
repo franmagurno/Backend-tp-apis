@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken'); // Importar JSON Web Token 
 const userService = require('../services/users'); // Importa los servicios
 const User = require('../db/models/users'); // Asegúrate de que la ruta sea correcta
 const upload = require('../middlewares/upload');
@@ -9,7 +10,7 @@ exports.registerUser = async (req, res) => {
     const { nombre, correo, contrasena } = req.body;
 
     if (!nombre || !correo || !contrasena) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+      return res.status(400).json({ error: "Todos los campos son obligatorios" });
     }
 
     const fotoPerfil = req.file ? `/uploads/${req.file.filename}` : null;
@@ -23,12 +24,29 @@ exports.registerUser = async (req, res) => {
       foto_perfil: fotoPerfil,
     });
 
-    res.status(201).json({ success: true, user });
+    // Generate a token for the new user
+    const token = jwt.sign(
+      { id_usuario: user.id_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.status(201).json({
+      token,
+      usuario: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        correo: user.correo,
+        foto_perfil: user.foto_perfil,
+      },
+    });
   } catch (error) {
-    console.error('Error al registrar usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error("Error al registrar usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 };
+
+
 
 
 // Controlador: Obtener todos los usuarios
@@ -66,42 +84,36 @@ exports.getUserByEmail = async (req, res) => {
 
 
 exports.loginUser = async (req, res) => {
-  console.log("Request body:", req.body); 
   const { correo, contrasena } = req.body;
 
   try {
-    // Buscar al usuario por correo
-    const user = await User.findOne({ where: { correo } });
-    if (!user) {
-      return res.status(401).json({ error: "Email o contraseña incorrectos" });
+    // Busca el usuario por correo
+    const usuario = await User.findOne({ where: { correo } });
+
+    if (!usuario) {
+      return res.status(401).json({ error: 'Usuario no encontrado.' });
     }
 
-    // Verificar si la contraseña es válida
-    const isPasswordValid = await bcrypt.compare(contrasena, user.contrasena);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Email o contraseña incorrectos" });
+    // Compara la contraseña ingresada con el hash almacenado
+    const isMatch = await bcrypt.compare(contrasena, usuario.contrasena);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Contraseña incorrecta.' });
     }
 
-    // Actualizar el último acceso
-    user.ultimo_acceso = new Date();
-    await user.save(); // Guardar los cambios en la base de datos
+    // Genera un token JWT si la contraseña es correcta
+    const token = jwt.sign(
+      { id_usuario: usuario.id_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-    // Responder con los datos del usuario
-    res.json({
-      message: "Inicio de sesión exitoso",
-      usuario: {
-        id_usuario: user.id_usuario,
-        nombre: user.nombre,
-        correo: user.correo,
-        ultimo_acceso: user.ultimo_acceso, // Devuelve el último acceso actualizado
-      },
-    });
+    res.status(200).json({ token, usuario });
   } catch (error) {
-    console.error("Error al iniciar sesión:", error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    console.error('Error al iniciar sesión:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 };
-
 // Controlador: Actualizar perfil
 exports.updateProfile = async (req, res) => {
   try {

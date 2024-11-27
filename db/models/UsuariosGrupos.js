@@ -1,40 +1,31 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../db'); // Asegura la ruta correcta
-const User = require('./users');
-const Project= require('./projects');
+const sequelize = require('../db');
+
+
 const UsuariosGrupos = sequelize.define('UsuariosGrupos', {
-  id_usuario_grupo: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
   id_usuario: {
     type: DataTypes.INTEGER,
-    references: {
-      model: User,
-      key: 'id_usuario',
-    },
     allowNull: false,
+    primaryKey: true,
   },
   id_grupo: {
     type: DataTypes.INTEGER,
-    references: {
-      model: Project,
-      key: 'id',
-    },
     allowNull: false,
+    primaryKey: true,
   },
   rol: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
+    type: DataTypes.ENUM('Creador', 'Miembro'),
+    allowNull: false,
   },
   fecha_asignacion: {
     type: DataTypes.DATE,
-    allowNull: true,
+    allowNull: false,
   },
 }, {
   tableName: 'Usuarios_Grupos',
-  timestamps: true,
+  timestamps: false, // No hay campos `createdAt` ni `updatedAt`
 });
+
+
 
 module.exports = UsuariosGrupos;

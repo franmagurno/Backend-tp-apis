@@ -22,7 +22,7 @@ router.put('/profile', authenticate, userController.updateProfile);
 // Ruta para cambiar contraseña (Protegida)
 router.put('/password', authenticate, userController.changePassword);
 
-// Ruta para eliminar cuenta (Protegida)
+// Ruta para eliminar cuenta (Protegida)ACAA
 router.delete('/delete', authenticate, userController.deleteAccount);
 
 module.exports = router;

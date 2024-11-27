@@ -4,7 +4,7 @@ const sequelize = require('../db');
 const Project = sequelize.define(
   'Project',
   {
-    id: {
+    id_proyecto: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -24,7 +24,7 @@ const Project = sequelize.define(
   },
   {
     tableName: 'proyectos',
-    timestamps: true,
+    timestamps: false,
   }
 );
 

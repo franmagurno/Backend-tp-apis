@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
-const path = require('path'); // Importa el módulo path
+const path = require('path');
 const { sequelize } = require('./db/models');
 const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
@@ -10,32 +10,34 @@ const ticketRoutes = require('./routes/tickets');
 const notificationsRoutes = require('./routes/notification');
 const multer = require('multer');
 
-dotenv.config();
+dotenv.config(); // Carga las variables de entorno desde el archivo .env
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isDev = process.env.NODE_ENV === 'development';
 
 app.use((req, res, next) => {
-  console.log('Request body:', req.body);
-  console.log('Request file:', req.file);
+  console.log('Request body:', req.body); // Verifica los datos enviados en el body
+  console.log('Request file:', req.file); // Verifica archivos enviados (si aplica)
   next();
 });
 
 // Middleware global
 app.use(express.json());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3001',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3001', // Configura el cliente permitido
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
+    credentials: true, // Permitir el envío de cookies o encabezados de autorización
+  })
+);
 app.use(morgan('dev'));
 
 // Configuración de multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Sirviendo la carpeta 'uploads' como estáticos
+// Sirviendo la carpeta 'uploads' como archivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rutas
@@ -50,36 +52,41 @@ app.get('/health', (req, res) => {
 });
 
 // Verificar conexión a la base de datos
-sequelize.authenticate()
+sequelize
+  .authenticate()
   .then(() => console.log('Conexión a la base de datos establecida exitosamente'))
   .catch((error) => console.error('Error al conectar a la base de datos:', error));
 
 // Sincronizar modelos
-sequelize.sync({ alter: isDev })
+sequelize
+  .sync({ alter: isDev })
   .then(() => console.log('Modelos sincronizados con la base de datos'))
   .catch((error) => console.error('Error al sincronizar modelos:', error));
 
-// Manejo de errores
+// Middleware global para manejar errores
 app.use((err, req, res, next) => {
   console.error('Error interno:', err);
 
+  // Manejo de errores de Sequelize
   if (err.name === 'SequelizeValidationError') {
-    return res.status(400).json({ error: err.errors.map(e => e.message) });
+    return res.status(400).json({ error: err.errors.map((e) => e.message) });
   }
 
-  if (err.name === 'UnauthorizedError') {
-    return res.status(401).json({ error: 'No autorizado.' });
+  // Manejo de errores de autenticación
+  if (err.name === 'UnauthorizedError' || err.message.includes('jwt')) {
+    return res.status(401).json({ error: 'No autorizado o token inválido.' });
   }
 
+  // Error genérico
   res.status(500).json({ error: 'Ocurrió un error interno en el servidor.' });
 });
 
-// Ruta de fallback
+// Ruta de fallback para rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });
 });
 
-// Iniciar servidor
+// Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
