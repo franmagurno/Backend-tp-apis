@@ -4,7 +4,8 @@ const Project = require('./projects');
 const UsuariosGrupos = require('./UsuariosGrupos');
 const Notification = require('./notifications');
 const TipoNotificacion = require('./tipo_notificacion');
-
+const Ticket = require('./tickets');
+const TicketMember = require('./ticketMembers');
 // Configurar asociaciones
 const setupAssociations = () => {
   // Asociación Usuario - UsuariosGrupos
@@ -33,6 +34,15 @@ const setupAssociations = () => {
   Notification.belongsTo(TipoNotificacion, { foreignKey: 'id_tipo' });
   TipoNotificacion.hasMany(Notification, { foreignKey: 'id_tipo' });
 };
+Ticket.hasMany(TicketMember, {
+  foreignKey: 'id_ticket',
+  as: 'members',
+});
+
+// Relación inversa: Un TicketMember pertenece a un Ticket
+TicketMember.belongsTo(Ticket, {
+  foreignKey: 'id_ticket',
+});
 
 // Llamar a las configuraciones de asociaciones
 setupAssociations();
@@ -45,4 +55,6 @@ module.exports = {
   UsuariosGrupos,
   Notification,
   TipoNotificacion,
+  TicketMember,
+  Ticket,
 };

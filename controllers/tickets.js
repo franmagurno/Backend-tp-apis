@@ -1,12 +1,17 @@
 const ticketService = require('../services/tickets');
 const upload = require('../middlewares/upload'); // Middleware de subida de archivos
 
+// Crear un ticket
 exports.createTicket = async (req, res) => {
   try {
-    const { id_proyecto, id_usuario, monto_total } = req.body;
+    const { id_proyecto, id_usuario, monto_total, division_type, members } = req.body;
 
     if (!id_proyecto || !id_usuario || !monto_total) {
       return res.status(400).json({ error: 'Se requieren id_proyecto, id_usuario y monto_total' });
+    }
+
+    if (division_type === 'porcentajes' && (!members || members.length === 0)) {
+      return res.status(400).json({ error: 'Se requieren members para la división por porcentajes' });
     }
 
     const fecha_compra = req.body.fecha_compra || new Date().toISOString();
@@ -18,6 +23,8 @@ exports.createTicket = async (req, res) => {
       fecha_compra,
       monto_total,
       imagen: imagenPath,
+      division_type,
+      members,
     });
 
     res.status(201).json(ticket);
@@ -26,7 +33,7 @@ exports.createTicket = async (req, res) => {
     res.status(500).json({ error: 'Error al crear el ticket' });
   }
 };
-
+// Obtener tickets por ID de proyecto
 exports.getTicketsByProjectId = async (req, res) => {
   try {
     const { id_proyecto } = req.params;
@@ -38,7 +45,7 @@ exports.getTicketsByProjectId = async (req, res) => {
     }
 
     const ticketsWithImageURL = tickets.map((ticket) => ({
-      ...ticket,
+      ...ticket.toJSON(), // Convertir el modelo Sequelize a JSON puro
       imagen_url: ticket.imagen
         ? `${req.protocol}://${req.get('host')}${ticket.imagen}`
         : null,
@@ -51,6 +58,7 @@ exports.getTicketsByProjectId = async (req, res) => {
   }
 };
 
+// Eliminar un ticket
 exports.deleteTicket = async (req, res) => {
   try {
     const { id } = req.params;

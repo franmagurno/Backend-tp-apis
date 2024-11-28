@@ -144,3 +144,27 @@ exports.getMembersByGroupId = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener los miembros del grupo.' });
   }
 };
+
+exports.deleteMemberFromGroup = async (req, res) => {
+  const { id_grupo, id_usuario } = req.params; // ID del grupo y del usuario a eliminar
+
+  if (!id_grupo || !id_usuario) {
+    return res.status(400).json({ error: 'Debe proporcionar el id del grupo y el id del usuario.' });
+  }
+
+  try {
+    // Elimina la relación entre el usuario y el grupo en la tabla UsuariosGrupos
+    const result = await UsuariosGrupos.destroy({
+      where: { id_grupo, id_usuario }
+    });
+
+    if (result) {
+      return res.status(200).json({ message: 'Miembro eliminado correctamente del grupo.' });
+    } else {
+      return res.status(404).json({ error: 'Miembro no encontrado o no pertenece a este grupo.' });
+    }
+  } catch (error) {
+    console.error('Error al eliminar miembro del grupo:', error);
+    return res.status(500).json({ error: 'Error al eliminar miembro del grupo.' });
+  }
+};

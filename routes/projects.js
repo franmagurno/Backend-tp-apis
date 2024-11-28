@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProject, getGroupsByUserId, addMemberToProject, deleteProject, getMembersByGroupId } = require('../controllers/projects'); // Importar la nueva funcionalidad
+const { createProject, getGroupsByUserId, addMemberToProject, deleteProject, getMembersByGroupId, deleteMemberFromGroup } = require('../controllers/projects'); // Importar la nueva funcionalidad
 const { authenticate } = require('../middlewares/authenticate'); // Importar el middleware de autenticación
 const router = express.Router();
 
@@ -10,5 +10,6 @@ router.post('/group/:id_grupo/add-member', authenticate, addMemberToProject); //
  // Agregar miembro a un proyecto
 router.delete('/delete/:id_grupo',deleteProject);
 router.get('/group/:id_grupo/members', authenticate, getMembersByGroupId); 
+router.delete('/projects/group/:id_grupo/member/:id_usuario', deleteMemberFromGroup);
 
 module.exports = router;

@@ -7,7 +7,6 @@ const Ticket = sequelize.define('Ticket', {
     primaryKey: true,
     autoIncrement: true,
   },
-
   id_proyecto: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -30,8 +29,13 @@ const Ticket = sequelize.define('Ticket', {
   },
   fecha_subida: {
     type: DataTypes.STRING, // Cambiado a STRING para usarlo como VARCHAR en SQL
-    allowNull: true, // Asegúrate de que sea nullable
-  }
+    allowNull: true,
+  },
+  division_type: {
+    type: DataTypes.ENUM('equitativo', 'porcentajes'),
+    allowNull: false,
+    defaultValue: 'equitativo', // Por defecto será equitativo
+  },
 }, {
   tableName: 'Tickets', // Nombre explícito de la tabla
   timestamps: false, // Desactiva createdAt y updatedAt
