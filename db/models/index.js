@@ -5,45 +5,60 @@ const UsuariosGrupos = require('./UsuariosGrupos');
 const Notification = require('./notifications');
 const TipoNotificacion = require('./tipo_notificacion');
 const Ticket = require('./tickets');
-const TicketMember = require('./ticketMembers');
+
+const ClosedBalance = require('./closedBalances');
+
 // Configurar asociaciones
 const setupAssociations = () => {
   // Asociación Usuario - UsuariosGrupos
   Usuario.hasMany(UsuariosGrupos, {
     foreignKey: 'id_usuario',
-    as: 'GroupMemberships',   // Alias for association
+    onDelete: 'CASCADE',
+    as: 'GroupMemberships',
   });
 
   UsuariosGrupos.belongsTo(Usuario, {
-    foreignKey: 'id_usuario', // Foreign key in UsuariosGrupos table
-    targetKey: 'id_usuario',          // Primary key in Usuario table
-    as: 'User',               // Alias for association
+    foreignKey: 'id_usuario',
+    targetKey: 'id_usuario',
+    as: 'User',
   });
 
-  Project.belongsTo(Usuario, { as: 'creator', foreignKey: 'id_creador' });
+  Project.belongsTo(Usuario, { as: 'creator', foreignKey: 'id_creador', onDelete: 'CASCADE' });
 
   // Asociación UsuariosGrupos - Project
   UsuariosGrupos.belongsTo(Project, {
-    foreignKey: 'id_grupo', // Llave foránea en Usuarios_Grupos
-    targetKey: 'id_proyecto', // Llave primaria en proyectos
-    as: 'AssociatedProject', // Alias único
+    foreignKey: 'id_grupo',
+    targetKey: 'id_proyecto',
+    as: 'AssociatedProject',
   });
- // Alias único para esta asociación
 
   // Asociación Notification - TipoNotificacion
   Notification.belongsTo(TipoNotificacion, { foreignKey: 'id_tipo' });
   TipoNotificacion.hasMany(Notification, { foreignKey: 'id_tipo' });
-};
-Ticket.hasMany(TicketMember, {
-  foreignKey: 'id_ticket',
-  as: 'members',
-});
 
-// Relación inversa: Un TicketMember pertenece a un Ticket
-TicketMember.belongsTo(Ticket, {
-  foreignKey: 'id_ticket',
-});
+  Usuario.hasMany(Project, { foreignKey: 'id_creador', onDelete: 'CASCADE', as: 'projects' });
 
+  // Asociación Ticket - TicketMember
+
+  // Asociación Usuario - Ticket
+  Usuario.hasMany(Ticket, { foreignKey: 'id_usuario', as: 'tickets' });
+  Ticket.belongsTo(Usuario, { foreignKey: 'id_usuario', as: 'usuario' });
+
+  // Asociación Project - Ticket
+  Project.hasMany(Ticket, { foreignKey: 'id_proyecto', as: 'tickets' });
+  Ticket.belongsTo(Project, { foreignKey: 'id_proyecto', as: 'project' });
+
+  // Asociación Usuario - ClosedBalance (Ajustado)
+  Usuario.hasMany(ClosedBalance, { foreignKey: 'user_from', as: 'sentBalances' });
+  Usuario.hasMany(ClosedBalance, { foreignKey: 'user_to', as: 'receivedBalances' });
+
+  ClosedBalance.belongsTo(Usuario, { foreignKey: 'user_from', as: 'userFrom' });
+  ClosedBalance.belongsTo(Usuario, { foreignKey: 'user_to', as: 'userTo' });
+
+  // Asociación Project - ClosedBalance (Ajustado)
+  Project.hasMany(ClosedBalance, { foreignKey: 'group_id', as: 'balances' });
+  ClosedBalance.belongsTo(Project, { foreignKey: 'group_id', as: 'group' });
+}
 // Llamar a las configuraciones de asociaciones
 setupAssociations();
 
@@ -55,6 +70,6 @@ module.exports = {
   UsuariosGrupos,
   Notification,
   TipoNotificacion,
-  TicketMember,
   Ticket,
+  ClosedBalance,
 };

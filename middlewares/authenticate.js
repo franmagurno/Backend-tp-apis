@@ -1,17 +1,27 @@
 const jwt = require('jsonwebtoken');
 
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'No autorizado. Token requerido.' });
-  }
 
+
+const authenticate = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Adjuntar datos del usuario al request
-    next(); // Continuar con el siguiente middleware o controlador
+    // Obtén el token del encabezado Authorization
+    const token = req.headers.authorization?.split(' ')[1]; // 'Bearer <token>'
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    // Verificar y decodificar el token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Usa tu clave secreta
+
+    // Aseguramos que la información del usuario esté en req.user
+    req.user = decoded;
+
+    // Continuar con la siguiente función/middleware
+    next();
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido o expirado.' });
+    console.error('Error al autenticar token:', error);
+    return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 };
 

@@ -8,6 +8,7 @@ const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const ticketRoutes = require('./routes/tickets');
 const notificationsRoutes = require('./routes/notification');
+const balanceRoutes = require('./routes/balances');
 const multer = require('multer');
 
 dotenv.config(); // Carga las variables de entorno desde el archivo .env
@@ -15,12 +16,6 @@ dotenv.config(); // Carga las variables de entorno desde el archivo .env
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isDev = process.env.NODE_ENV === 'development';
-
-app.use((req, res, next) => {
-  console.log('Request body:', req.body); // Verifica los datos enviados en el body
-  console.log('Request file:', req.file); // Verifica archivos enviados (si aplica)
-  next();
-});
 
 // Middleware global
 app.use(express.json());
@@ -45,10 +40,18 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/balances', balanceRoutes);
 
 // Prueba de salud
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Mostrar todas las rutas registradas
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(`Método: ${Object.keys(middleware.route.methods).join(', ').toUpperCase()}, Ruta: ${middleware.route.path}`);
+  }
 });
 
 // Verificar conexión a la base de datos

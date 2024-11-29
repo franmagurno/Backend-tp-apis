@@ -1,30 +1,30 @@
-const ticketService = require('../services/tickets');
+const Ticket= require('../services/tickets');
 const upload = require('../middlewares/upload'); // Middleware de subida de archivos
 
 // Crear un ticket
 exports.createTicket = async (req, res) => {
   try {
-    const { id_proyecto, id_usuario, monto_total, division_type, members } = req.body;
-
-    if (!id_proyecto || !id_usuario || !monto_total) {
-      return res.status(400).json({ error: 'Se requieren id_proyecto, id_usuario y monto_total' });
-    }
-
-    if (division_type === 'porcentajes' && (!members || members.length === 0)) {
-      return res.status(400).json({ error: 'Se requieren members para la división por porcentajes' });
-    }
-
-    const fecha_compra = req.body.fecha_compra || new Date().toISOString();
-    const imagenPath = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const ticket = await ticketService.createTicket({
+    const {
       id_proyecto,
       id_usuario,
       fecha_compra,
       monto_total,
-      imagen: imagenPath,
+      descripcion,
       division_type,
-      members,
+      porcentajes,
+    } = req.body;
+
+    const imagenPath = req.file ? `/uploads/${req.file.filename}` : null;
+
+    const ticket = await Ticket.createTicket({
+      id_proyecto,
+      id_usuario,
+      fecha_compra,
+      monto_total,
+      imagen: imagenPath, // Guarda la ruta de la imagen
+      descripcion,
+      division_type,
+      porcentajes: division_type === 'porcentajes' ? porcentajes : null,
     });
 
     res.status(201).json(ticket);
@@ -33,12 +33,13 @@ exports.createTicket = async (req, res) => {
     res.status(500).json({ error: 'Error al crear el ticket' });
   }
 };
+
 // Obtener tickets por ID de proyecto
 exports.getTicketsByProjectId = async (req, res) => {
   try {
     const { id_proyecto } = req.params;
 
-    const tickets = await ticketService.getTicketsByProjectId(id_proyecto);
+    const tickets = await Ticket.getTicketsByProjectId(id_proyecto);
 
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ error: 'No se encontraron tickets para este proyecto.' });

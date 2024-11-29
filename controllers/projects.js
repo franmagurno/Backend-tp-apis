@@ -2,6 +2,7 @@ const projectService = require('../services/projects');
 const UsuariosGrupos = require ('../db/models/UsuariosGrupos');
 const Project = require('../db/models/projects'); // Asegúrate de que la ruta sea correcta
 const User = require('../db/models/users');
+const Ticket = require('../db/models/tickets');
 
 // Controlador: Crear un nuevo proyecto
 exports.createProject = async (req, res) => {
@@ -166,5 +167,82 @@ exports.deleteMemberFromGroup = async (req, res) => {
   } catch (error) {
     console.error('Error al eliminar miembro del grupo:', error);
     return res.status(500).json({ error: 'Error al eliminar miembro del grupo.' });
+  }
+};
+
+exports.getGroupBalances = async (req, res) => {
+  const groupId = req.params.groupId;
+
+  try {
+    // Obtener los tickets del grupo con la información del usuario asociado
+    const tickets = await Ticket.findAll({
+      where: { id_proyecto: groupId },
+      include: [
+        {
+          model: User,
+          as: 'usuario', // Usa el alias correcto definido en tu asociación
+          attributes: ['id_usuario', 'nombre', 'correo'], // Campos necesarios del usuario
+        },
+      ],
+    });
+
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ error: 'No se encontraron tickets para este grupo.' });
+    }
+
+    // Calcular el balance total del grupo
+    const totalMonto = tickets.reduce((acc, ticket) => acc + ticket.monto_total, 0);
+    const numMiembros = await User.count({ where: { grupoId: groupId } }); // Número de miembros en el grupo
+    const sharePerMember = totalMonto / numMiembros; // Cuánto debería pagar cada miembro
+
+    // Inicializar los balances por miembro
+    const balances = {};
+
+    // Procesar los tickets
+    tickets.forEach((ticket) => {
+      const { id_usuario, nombre, correo } = ticket.usuario;
+      const montoTotal = ticket.monto_total;
+
+      if (!balances[id_usuario]) {
+        balances[id_usuario] = {
+          id_usuario,
+          nombre,
+          correo,
+          porPagar: 0,
+          porCobrar: 0,
+        };
+      }
+
+      // Aumentar el monto que este usuario debe cobrar (porque pagó por el ticket)
+      balances[id_usuario].porCobrar += montoTotal;
+    });
+
+    // Ajustar los balances para reflejar cuánto debe pagar cada usuario
+    for (const userId in balances) {
+      const balance = balances[userId];
+
+      // Cada usuario debe pagar su parte
+      balance.porPagar = Math.max(0, sharePerMember - balance.porCobrar);
+
+      // Ajustar el balance de "por cobrar"
+      balance.porCobrar = Math.max(0, balance.porCobrar - sharePerMember);
+
+      // Determinar el estado financiero
+      if (balance.porCobrar > 0) {
+        balance.estado = 'A Favor';
+      } else if (balance.porPagar > 0) {
+        balance.estado = 'Deuda';
+      } else {
+        balance.estado = 'Saldo';
+      }
+    }
+
+    // Convertir los balances a un array para enviar la respuesta
+    const balanceArray = Object.values(balances);
+
+    res.json({ groupId, balances: balanceArray });
+  } catch (error) {
+    console.error('Error fetching group balances:', error);
+    res.status(500).json({ error: 'Error fetching group balances.' });
   }
 };

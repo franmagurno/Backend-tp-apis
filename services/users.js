@@ -1,5 +1,6 @@
 const User = require('../db/models/users');
 const bcrypt = require('bcrypt');
+const { UsuariosGrupos, Proyectos,  sequelize } = require('../db/models');
 
 // Servicio: Buscar usuario por email
 const findUserByEmail = async (correo) => {
@@ -48,11 +49,44 @@ const changeUserPassword = async (id_usuario, contrasena_actual, nueva_contrasen
 
 // Servicio: Eliminar usuario
 const deleteUser = async (id_usuario) => {
-  const user = await User.findByPk(id_usuario);
-  if (!user) throw new Error('Usuario no encontrado.');
-  await user.destroy();
+  console.log('Deleting user with ID:', id_usuario);
+
+  try {
+    await sequelize.transaction(async (transaction) => {
+      console.log('Deleting related data for user:', id_usuario);
+
+      // Delete related data
+      await UsuariosGrupos.destroy({ where: { id_usuario }, transaction });
+      await Proyectos.destroy({ where: { id_creador: id_usuario }, transaction });
+
+      // Log the result of findByPk
+      console.log('Fetching user with ID:', id_usuario);
+      const user = await User.findByPk(id_usuario, { transaction });
+
+      console.log('Result of findByPk:', user);
+
+      if (!user) {
+        console.error(`User with ID ${id_usuario} not found.`);
+        throw new Error(`Usuario con ID ${id_usuario} no encontrado.`);
+      }
+
+      console.log('User found. Proceeding with deletion:', user);
+      await user.destroy({ transaction });
+    });
+  } catch (error) {
+    console.error('Error while deleting user:', error);
+    throw new Error(`Error al eliminar el usuario: ${error.message}`);
+  }
 };
 
+const updateProfilePicture = async (id_usuario, foto_perfil) => {
+  const user = await User.findByPk(id_usuario);
+  if (!user) throw new Error('Usuario no encontrado.');
+
+  // Actualizar el campo foto_perfil en el usuario
+  user.foto_perfil = foto_perfil;
+  await user.save();
+};
 module.exports = {
   findUserByEmail,
   createUser,
@@ -61,4 +95,5 @@ module.exports = {
   updateUser,
   changeUserPassword,
   deleteUser,
+  updateProfilePicture,
 };

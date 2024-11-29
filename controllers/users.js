@@ -132,17 +132,50 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// Controlador: Cambiar contraseña
 exports.changePassword = async (req, res) => {
   try {
-    const { id_usuario } = req.user;
+    // Obtener el token desde los headers
+    const token = req.headers.authorization?.split(' ')[1]; // Token en formato "Bearer <token>"
+    if (!token) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    // Verificar y decodificar el token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+
+    const { id_usuario } = decoded; // Obtener el id_usuario del token
     const { contrasena_actual, nueva_contrasena } = req.body;
 
+    // Validación de los campos de contraseña
     if (!contrasena_actual || !nueva_contrasena) {
       return res.status(400).json({ error: 'Debe proporcionar la contraseña actual y la nueva contraseña.' });
     }
 
-    await userService.changeUserPassword(id_usuario, contrasena_actual, nueva_contrasena);
+    // Buscar al usuario por id_usuario
+    const usuario = await userService.getUserById(id_usuario);
+    console.log('Usuario encontrado:', usuario); // Verifica si el usuario fue encontrado
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    // Verificar si la contraseña actual proporcionada es correcta
+    const passwordMatch = await bcrypt.compare(contrasena_actual, usuario.contrasena);
+    if (!passwordMatch) {
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta.' });
+    }
+
+    // Hashear la nueva contraseña
+    const hashedPassword = await bcrypt.hash(nueva_contrasena, 10);
+
+    // Actualizar la contraseña en la base de datos
+    await userService.updatePassword(id_usuario, hashedPassword);
+
+    // Responder con éxito
     res.status(200).json({ message: 'Contraseña actualizada exitosamente.' });
   } catch (error) {
     console.error('Error al cambiar contraseña:', error);
@@ -150,15 +183,77 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// Controlador: Eliminar cuenta
+
+
 exports.deleteAccount = async (req, res) => {
   try {
-    const { id_usuario } = req.user;
+    const { id_usuario } = req.params; // Obtén el id_usuario desde los parámetros de la URL
 
-    await userService.deleteUser(id_usuario);
+    // Verifica si el ID fue enviado
+    if (!id_usuario) {
+      return res.status(400).json({ error: 'El ID del usuario es obligatorio.' });
+    }
+
+    // Busca el usuario por su ID
+    const user = await User.findByPk(id_usuario); // Reemplaza "User" con el modelo correcto
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    // Elimina el usuario
+    await user.destroy(); // Método directo en la instancia del modelo para eliminarlo
+
     res.status(200).json({ message: 'Cuenta eliminada exitosamente.' });
   } catch (error) {
     console.error('Error al eliminar cuenta:', error);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
+
+exports.getUserById = async (req, res) => {
+  try {
+    const { id_usuario } = req.params; // Aquí obtienes el parámetro de la URL
+    const user = await User.findByPk(id_usuario); // Asegúrate de usar la consulta correcta para obtener el usuario por ID
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};
+
+// Controlador para actualizar la foto de perfil
+exports.updateProfilePicture = async (req, res) => {
+  try {
+    // Obtenemos el id_usuario desde `req.user` que debe ser configurado por un middleware de autenticación (JWT)
+    const { id_usuario } = req.user; // Asegúrate de que req.user esté siendo llenado con el usuario autenticado
+
+    if (!id_usuario) {
+      return res.status(400).json({ error: 'Usuario no autenticado.' });
+    }
+
+    // Verificamos si un archivo fue enviado en la solicitud
+    const fotoPerfil = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (!fotoPerfil) {
+      return res.status(400).json({ error: 'No se proporcionó una foto de perfil.' });
+    }
+
+    // Llamamos al servicio para actualizar la foto de perfil del usuario en la base de datos
+    const updatedUser = await userService.updateUser(id_usuario, { foto_perfil: fotoPerfil });
+
+    // Respondemos con el usuario actualizado, incluyendo la nueva foto de perfil
+    res.status(200).json({
+      message: 'Foto de perfil actualizada correctamente.',
+      usuario: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error al actualizar la foto de perfil:', error);
+    res.status(500).json({ error: 'Error al actualizar la foto de perfil.' });
   }
 };
