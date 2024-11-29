@@ -137,8 +137,31 @@ const addMemberToProject = async (id_grupo, correo) => {
   }
 };
 
+const getMembersByGroupId = async (groupId) => {
+  try {
+    // Obtener miembros del grupo con el alias correcto en la relación
+    const miembros = await Project.findAll({
+      where: { id_proyecto: groupId },  // 'group_id' es el campo en la tabla Project
+      include: [
+        {
+          model: Usuario,  // Relacionamos el modelo Usuario con Project
+          as: 'creator',  // El alias correcto de la relación
+          attributes: ['id_usuario', 'nombre', 'correo'],  // Los campos de Usuario que quieres obtener
+        },
+      ],
+    });
+
+    // Retorna los miembros (usuarios) del grupo
+    return miembros.map(miembro => miembro.creator);  // Asegúrate de acceder con el alias correcto
+  } catch (error) {
+    console.error('Error al obtener los miembros:', error);
+    throw new Error('Error al obtener los miembros.');
+  }
+};
+
 module.exports = {
   createProject,
   getProjectsByUserId,
-  addMemberToProject, // Asegúrate de que esté aquí
+  addMemberToProject,
+  getMembersByGroupId, // Asegúrate de que esté aquí
 };

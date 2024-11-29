@@ -1,4 +1,4 @@
-const Ticket = require('../db/models/tickets');
+const Ticket = require('../db/models/tickets');  // Importar el modelo Ticket
 const sequelize = require('../db/db');
 
 // Servicio: Crear un ticket
@@ -13,6 +13,13 @@ const createTicket = async ({
   descripcion,
 }) => {
   try {
+    // Si la división es equitativa, calculamos el porcentaje de cada miembro
+    if (division_type === 'equitativo') {
+      // Aseguramos que no haya porcentajes proporcionados para la división equitativa
+      porcentajes = []; // Limpiamos los porcentajes ya que se manejarán internamente
+    }
+
+    // Crear el ticket en la base de datos
     const ticket = await Ticket.create({
       id_proyecto,
       id_usuario,
@@ -20,7 +27,7 @@ const createTicket = async ({
       monto_total,
       imagen,
       division_type,
-      porcentajes: division_type === 'porcentajes' ? porcentajes : null,
+      porcentajes: division_type === 'porcentajes' ? porcentajes : null,  // Solo asignamos porcentajes si es tipo 'porcentajes'
       descripcion,
     });
 
@@ -37,20 +44,25 @@ const createTicket = async ({
 
 // Servicio: Obtener tickets por ID de proyecto
 const getTicketsByProjectId = async (id_proyecto) => {
-  return await Ticket.findAll({
-    where: { id_proyecto },
-    attributes: [
-      'id_ticket',
-      'id_proyecto',
-      'id_usuario',
-      'fecha_compra',
-      'monto_total',
-      'imagen',
-      'division_type',
-      'porcentajes',
-      'descripcion',
-    ], // Asegúrate de incluir los campos necesarios
-  });
+  try {
+    return await Ticket.findAll({
+      where: { id_proyecto },
+      attributes: [
+        'id_ticket',
+        'id_proyecto',
+        'id_usuario',
+        'fecha_compra',
+        'monto_total',
+        'imagen',
+        'division_type',
+        'porcentajes',
+        'descripcion',
+      ], // Asegúrate de incluir los campos necesarios
+    });
+  } catch (error) {
+    console.error('Error al obtener los tickets del proyecto:', error);
+    throw new Error('Error al obtener los tickets del proyecto.');
+  }
 };
 
 // Servicio: Eliminar un ticket

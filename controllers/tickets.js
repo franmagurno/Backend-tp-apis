@@ -1,9 +1,12 @@
-const Ticket= require('../services/tickets');
+const Ticket = require('../services/tickets'); 
+const Project = require('../controllers/projects'); 
 const upload = require('../middlewares/upload'); // Middleware de subida de archivos
 
 // Crear un ticket
+// Crear un ticket
 exports.createTicket = async (req, res) => {
   try {
+    // Asegúrate de que id_proyecto esté en req.body
     const {
       id_proyecto,
       id_usuario,
@@ -14,14 +17,18 @@ exports.createTicket = async (req, res) => {
       porcentajes,
     } = req.body;
 
+    if (!id_proyecto) {
+      return res.status(400).json({ error: 'id_proyecto es obligatorio.' }); // Cambié 'id_grupo' a 'id_proyecto'
+    }
+
     const imagenPath = req.file ? `/uploads/${req.file.filename}` : null;
 
     const ticket = await Ticket.createTicket({
-      id_proyecto,
+      id_proyecto,  // Asegúrate de que el id_proyecto esté correctamente asignado
       id_usuario,
       fecha_compra,
       monto_total,
-      imagen: imagenPath, // Guarda la ruta de la imagen
+      imagen: imagenPath,
       descripcion,
       division_type,
       porcentajes: division_type === 'porcentajes' ? porcentajes : null,
@@ -39,19 +46,23 @@ exports.getTicketsByProjectId = async (req, res) => {
   try {
     const { id_proyecto } = req.params;
 
+    // Obtener tickets desde el servicio de tickets
     const tickets = await Ticket.getTicketsByProjectId(id_proyecto);
 
+    // Verificar si no hay tickets
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ error: 'No se encontraron tickets para este proyecto.' });
     }
 
+    // Incluir la URL completa de la imagen
     const ticketsWithImageURL = tickets.map((ticket) => ({
       ...ticket.toJSON(), // Convertir el modelo Sequelize a JSON puro
       imagen_url: ticket.imagen
-        ? `${req.protocol}://${req.get('host')}${ticket.imagen}`
+        ? `${req.protocol}://${req.get('host')}${ticket.imagen}` // Obtener la URL completa de la imagen
         : null,
     }));
 
+    // Enviar los tickets con las URLs de las imágenes
     res.json(ticketsWithImageURL);
   } catch (error) {
     console.error('Error al obtener los tickets por proyecto:', error);
@@ -64,11 +75,13 @@ exports.deleteTicket = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleted = await ticketService.deleteTicket(id);
+    // Eliminar el ticket utilizando el servicio
+    const deleted = await Ticket.deleteTicket(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Ticket no encontrado' });
     }
 
+    // Enviar mensaje de éxito
     res.json({ message: 'Ticket eliminado exitosamente' });
   } catch (error) {
     console.error('Error al eliminar ticket:', error);

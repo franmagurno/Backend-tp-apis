@@ -43,7 +43,7 @@ const ClosedBalance = sequelize.define(
     },
     estado: {
       type: DataTypes.ENUM('pendiente', 'saldado'),
-      allowNull: false,
+      allowNull: true,
       defaultValue: 'pendiente',
     },
   },
